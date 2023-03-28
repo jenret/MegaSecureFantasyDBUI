@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin</title>
+    <link rel="stylesheet" href="styles.css">
+    <script type="text/javascript">
+        var authHeaderValue = null;
+        var username = null;
+        var password = null;
+
+        //this is the function for the login
+        function login() {
+            username = document.getElementById('txtUsername').value;
+            password = document.getElementById('txtPassword').value;
+            authHeaderValue = "Basic " + btoa(username + ":" + password);
+
+            var xmlHttp = new XMLHttpRequest();
+            xmlHttp.open("GET", "http://localhost:8081/user/login");
+            xmlHttp.setRequestHeader('Authorization', authHeaderValue);
+            xmlHttp.onreadystatechange = function () {
+                if (this.readyState == XMLHttpRequest.DONE && this.status == 200) {
+                    console.log("LOGIN SUCCESS");
+                    document.getElementById("lblMsg").innerHTML = "Welcome " + username;
+                    showLoginForm(false);
+                    userStorage(username, password);
+                } else if (this.readyState == XMLHttpRequest.DONE && this.status == 401) {
+                    document.getElementById("lblMsg").innerHTML = "Invalid username or password please try again";
+                    showLoginForm(true);
+                } else if (this.readyState == XMLHttpRequest.DONE && this.status == 403) {
+                    document.getElementById("lblMsg").innerHTML = "You are not authorized to sign into this page";
+                    showLoginForm(true);
+                }
+            }
+            xmlHttp.send();
+        }
+
+        function  showLoginForm(bTF) {
+            if (bTF == false) {
+                document.getElementById('frmLogin').style.display = "none";
+                document.getElementById('frmMain').style.display = "block";
+            }
+            else {
+                document.getElementById('frmLogin').style.display = "block";
+                document.getElementById('frmMain').style.display = "none";
+            }
+            txtUsername = "";
+            txtPassword = "";
+        }
+
+        function userStorage(strUsername, strPassword) {
+            sessionStorage.setItem("username", strUsername);
+            sessionStorage.setItem("password", strPassword);
+        }
+
+        function createUser() {
+            var username = document.getElementById("newUserName").value;
+            var tempPassword = document.getElementById("newUserPassword").value;
+            var role = document.getElementById("newUserRole").value;
+            var user = {
+                "username": username,
+                "password": tempPassword,
+                "role": role.toUpperCase()
+            }
+
+            console.log("Start the POST");
+            var xmlHttp = new XMLHttpRequest();
+            xmlHttp.open("POST", "http://localhost:8081/user/create");
+            xmlHttp.setRequestHeader("Content-Type", "application/json");
+            xmlHttp.setRequestHeader("Authorization", authHeaderValue);
+            xmlHttp.onreadystatechange = function () {
+                console.log("ready state: ", this.status);
+                if (this.readyState == XMLHttpRequest.DONE && this.status == 200) {
+                    console.log("user created")
+                }
+            }
+            xmlHttp.send(JSON.stringify(user));
+            var username = document.getElementById("newUserName").value = "";
+            var tempPassword = document.getElementById("newUserPassword").value = "";
+            var role = document.getElementById("newUserRole").value = "";
+        }
+
+        function updateUser() {
+            var username = document.getElementById("newUserName").value;
+            var tempPassword = document.getElementById("newUserPassword").value;
+            var role = document.getElementById("newUserRole").value;
+            var id = document.getElementById("find_id").value;
+            var user = {
+                "username": username,
+                "password": tempPassword,
+                "role": role.toUpperCase()
+            }
+            //ajax
+            console.log("Starting the PUT");
+            var xmlHttp = new XMLHttpRequest();
+            xmlHttp.open("PUT", "http://localhost:8081/user/" + id);
+            xmlHttp.setRequestHeader("Content-Type", "application/json");
+            xmlHttp.setRequestHeader("Authorization", authHeaderValue);
+            xmlHttp.onreadystatechange = function () {
+                console.log("ready state: ", this.status);
+                if (this.readyState == XMLHttpRequest.DONE && this.status == 200) {
+                    console.log("user updated");
+                }
+            }
+            xmlHttp.send(JSON.stringify(user));
+            var username = document.getElementById("newUserName").value = "";
+            var tempPassword = document.getElementById("newUserPassword").value = "";
+            var role = document.getElementById("newUserRole").value = "";
+        }
+
+        function getUsers() {
+            console.log("Getting users");
+            var xmlHttp = new XMLHttpRequest();
+            xmlHttp.setRequestHeader("Authorization", authHeaderValue);
+            xmlHttp.onreadystatechange = function () {
+                if (this.readyState == XMLHttpRequest.DONE && this.status == 200) {
+                    var users = JSON.parse(this.responseText);
+                    renderUsers(users);
+                }
+            }
+            xmlHttp.open("GET", "http://localhost:8081/user/findAll", true);
+            xmlHttp.send();
+        }
+
+        function renderUsers(users) {
+            var userTable = document.getElementById("tableArea");
+            userTable.innerHTML = "";
+            userTable +=
+                "<table>" +
+                "<tr>" +
+                "<th>ID</th>" +
+                "<th>Name</th>" +
+                "<th>Role</th></tr>"
+            for (var user of users) {
+                var userHtml = "<tr><td>"
+                    + user.id + "</td><td>"
+                    + user.name + "</td><td>"
+                    + user.role + "</td></tr>";
+                userTable.innerHTML += userHtml;
+            }
+        }
+
+        function findUser() {
+            console.log("find");
+            var id = document.getElementById("userIdTxt").value;
+            var xmlHttp = new XMLHttpRequest();
+            xmlHttp.setRequestHeader("Authorization", authHeaderValue);
+            xmlHttp.onreadystatechange = function () {
+                if (this.readyState == XMLHttpRequest.DONE && this.status == 200) {
+                    var user = JSON.parse(this.responseText);
+                    userIdTxt.value = user.id;
+                    newUserName.value = user.name;
+                    newUserPassword.value = user.password;
+                    newUserRole.value = user.role;
+                }
+            }
+            xmlHttp.open("GET", "http://localhost:8081/user/" + id, true);
+            xmlHttp.send();
+        }
+
+        function deleteUser() {
+            console.log("into delete");
+            var id = document.getElementById("userIdTxt").value;
+            var xmlHttp = new XMLHttpRequest();
+            xmlHttp.setRequestHeader("Authorization", authHeaderValue);
+            xmlHttp.open("DELETE", "http://localhost:8081/user/" + id);
+            xmlHttp.setRequestHeader("Content-Type", "application/json");
+            xmlHttp.onreadystatechange = function () {
+                console.log("ready state: ", this.status);
+                if (this.readyState == XMLHttpRequest.DONE && this.status == 200) {
+                    console.log("success in posting user");
+                }
+            }
+            xmlHttp.send(); //don't need to send
+        }
+
+        window.onload = function () {
+            getUsers();
+        }
+    </script>
+</head>
+<body>
+<nav>
+  <a href="/index.html">Home</a>
+  <a href="/characters.html">Characters</a>
+  <a href="/weapons.html">Weapons</a>
+  <a href="/locations.html">Locations</a>
+  <a href="/admin.html">Admin</a>
+</nav>
+<div id="frmLogin">
+    <h3>Login:</h3>
+    <label>Username:</label>
+    <input type="text" id="txtUsername"/>
+    <br>
+    <label>Password:</label>
+    <input type="text" id="txtPassword"/>
+    <button onclick="login();">Login</button>
+</div>
+<div id="lblMsg"></div>
+<br>
+<section id="frmMain">
+    <div id="tableArea">
+    </div>
+    <div>
+        <label>Username: </label>
+        <input type="text" id="newUserName">
+        <br>
+        <label>Temporary Password: </label>
+        <input type="text" id="newUserPassword">
+        <br>
+        <label>User Role: </label>
+        <input type="text" id="newUserRole">
+        <nav>
+            <button onclick="createUser();">Create User</button>
+            <button onclick="updateUser();">Update User</button>
+        </nav>
+    </div>
+    <div>
+        <label>ID: </label>
+        <input type="number" id="userIdTxt">
+        <br>
+        <button onclick="findUser();">Find User</button>
+        <button onclick="deleteUser();">Delete User</button>
+    </div>
+</section>
+</body>
+</html>
